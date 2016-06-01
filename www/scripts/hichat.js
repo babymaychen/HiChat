@@ -9,6 +9,25 @@ window.onload = function() {
     var hichat = new HiChat();
     hichat.init();
 };
+var emojiNames = [
+    {name:"cool", title:"酷毙了"},
+    {name:"fan", title:"烦死了"},
+    {name:"fei", title:"飞走喽"},
+    {name:"haha", title:"哈哈哈哈"},
+    {name:"hi", title:"打个招呼"},
+    {name:"kaixin", title:"开心极了"},
+    {name:"love", title:"爱你"},
+    {name:"maimeng", title:"卖萌"},
+    {name:"maimengqq", title:"萌萌哒"},
+    {name:"money", title:"钱多多"},
+    {name:"niuniu", title:"妖娆"},
+    {name:"OK", title:"没问题"},
+    {name:"power", title:"有力"},
+    {name:"qifu", title:"欺负人"},
+    {name:"study", title:"发奋学习"},
+    {name:"thanks", title:"谢谢"},
+    {name:"youxian", title:"安逸悠闲"}
+];
 var HiChat = function() {
     this.socket = null;
 };
@@ -17,12 +36,12 @@ HiChat.prototype = {
         var that = this;
         this.socket = io.connect();
         this.socket.on('connect', function() {
-            document.getElementById('info').textContent = 'get yourself a nickname :)';
+            document.getElementById('info').textContent = '给自己个昵称';
             document.getElementById('nickWrapper').style.display = 'block';
             document.getElementById('nicknameInput').focus();
         });
         this.socket.on('nickExisted', function() {
-            document.getElementById('info').textContent = '!nickname is taken, choose another pls';
+            document.getElementById('info').textContent = '!该昵称已存在，请起个别的名';
         });
         this.socket.on('loginSuccess', function() {
             document.title = 'hichat | ' + document.getElementById('nicknameInput').value;
@@ -37,9 +56,9 @@ HiChat.prototype = {
             }
         });
         this.socket.on('system', function(nickName, userCount, type) {
-            var msg = nickName + (type == 'login' ? ' joined' : ' left');
-            that._displayNewMsg('system ', msg, 'red');
-            document.getElementById('status').textContent = userCount + (userCount > 1 ? ' users' : ' user') + ' online';
+            var msg = nickName + (type == 'login' ? ' 加入' : ' 离开');
+            that._displayNewMsg('系统消息 ', msg, 'red');
+            document.getElementById('status').textContent = '当前在线人数：' + userCount;
         });
         this.socket.on('newMsg', function(user, msg, color) {
             that._displayNewMsg(user, msg, color);
@@ -109,7 +128,11 @@ HiChat.prototype = {
         this._initialEmoji();
         document.getElementById('emoji').addEventListener('click', function(e) {
             var emojiwrapper = document.getElementById('emojiWrapper');
-            emojiwrapper.style.display = 'block';
+            if (emojiwrapper.style.display == 'block') {
+                emojiwrapper.style.display = 'none';
+            } else {
+                emojiwrapper.style.display = 'block';
+            }
             e.stopPropagation();
         }, false);
         document.body.addEventListener('click', function(e) {
@@ -123,19 +146,20 @@ HiChat.prototype = {
             if (target.nodeName.toLowerCase() == 'img') {
                 var messageInput = document.getElementById('messageInput');
                 messageInput.focus();
-                messageInput.value = messageInput.value + '[emoji:' + target.title + ']';
+                messageInput.value = messageInput.value + '[emoji:' + target.class + ']';
             };
         }, false);
     },
     _initialEmoji: function() {
         var emojiContainer = document.getElementById('emojiWrapper'),
             docFragment = document.createDocumentFragment();
-        for (var i = 69; i > 0; i--) {
+        for (var emojiName in emojiNames) {
             var emojiItem = document.createElement('img');
-            emojiItem.src = '../content/emoji/' + i + '.gif';
-            emojiItem.title = i;
+            emojiItem.class = emojiNames[emojiName].name;
+            emojiItem.src = '../content/emoji/' + emojiNames[emojiName].name + '.gif';
+            emojiItem.title = emojiNames[emojiName].title;
             docFragment.appendChild(emojiItem);
-        };
+        }
         emojiContainer.appendChild(docFragment);
     },
     _displayNewMsg: function(user, msg, color) {
@@ -145,7 +169,7 @@ HiChat.prototype = {
             //determine whether the msg contains emoji
             msg = this._showEmoji(msg);
         msgToDisplay.style.color = color || '#000';
-        msgToDisplay.innerHTML = user + '<span class="timespan">(' + date + '): </span>' + msg;
+        msgToDisplay.innerHTML = '<span class="userName">' + user + '<span class="timespan">(' + date + '): </span></span>' + msg;
         container.appendChild(msgToDisplay);
         container.scrollTop = container.scrollHeight;
     },
@@ -154,18 +178,23 @@ HiChat.prototype = {
             msgToDisplay = document.createElement('p'),
             date = new Date().toTimeString().substr(0, 8);
         msgToDisplay.style.color = color || '#000';
-        msgToDisplay.innerHTML = user + '<span class="timespan">(' + date + '): </span> <br/>' + '<a href="' + imgData + '" target="_blank"><img src="' + imgData + '"/></a>';
+        msgToDisplay.innerHTML = '<span class="userName">' + user + '<span class="timespan">(' + date + '): </span></span> <br/>' + '<a href="' + imgData + '" target="_blank"><img src="' + imgData + '"/></a>';
         container.appendChild(msgToDisplay);
         container.scrollTop = container.scrollHeight;
     },
     _showEmoji: function(msg) {
+        var emojiNamesArray = emojiNames.map(function(emojiName) {
+            return emojiName.name;
+        });
+        console.log(emojiNamesArray);
         var match, result = msg,
-            reg = /\[emoji:\d+\]/g,
-            emojiIndex,
-            totalEmojiNum = document.getElementById('emojiWrapper').children.length;
-        while (match = reg.exec(msg)) {
+            reg = /\[emoji:\w+\]/g,
+            emojiIndex;
+           // totalEmojiNum = document.getElementById('emojiWrapper').children.length;
+           match = reg.exec(msg);
+        if (match) {
             emojiIndex = match[0].slice(7, -1);
-            if (emojiIndex > totalEmojiNum) {
+            if (emojiNamesArray.indexOf(emojiIndex) == -1) {
                 result = result.replace(match[0], '[X]');
             } else {
                 result = result.replace(match[0], '<img class="emoji" src="../content/emoji/' + emojiIndex + '.gif" />');//todo:fix this in chrome it will cause a new request for the image
